@@ -1,11 +1,11 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Toaster } from "@/components/ui/toaster"; // do shadcn
-import QueryProvider from "@/providers/QueryProvider";
-import AuthProvider from "@/providers/AuthProvider";
-import ThemeProvider from "@/providers/ThemeProvider";
+import { Toaster } from "sonner";
+import QueryProvider from "./providers/QueryProvider";
+import ThemeProvider from "./providers/ThemeProvider";
 import App from "./App";
-import "./styles/globals.css";
+import AuthProvider from "./providers/AuthProvider";
+import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -13,7 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <QueryProvider>
         <AuthProvider>
           <App />
-          <Toaster />
+          <Toaster richColors closeButton position="top-right" />{" "}
         </AuthProvider>
       </QueryProvider>
     </ThemeProvider>

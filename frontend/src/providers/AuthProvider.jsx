@@ -1,21 +1,23 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as auth from "@/services/auth.service";
-import { toast } from "@/components/ui/use-toast";
-
+import * as auth from "@/services/auth.services";
+import { toast } from "sonner";
+import { meCompact } from "@/services/user.service";
 const AuthCtx = createContext(null);
-
+import { saveTokens, loadAccessToken, clearTokens } from "@/lib/tokenStorage";
+import {
+  setAccessToken,
+  clearAccessToken,
+  hasEncryptedTokens,
+} from "@/lib/authToken";
 export default function AuthProvider({ children }) {
   const qc = useQueryClient();
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
+  const [accessToken, setAccessTokenState] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // expõe token em memória para axios
-  useEffect(() => {
-    window.__ACCESS_TOKEN__ = accessToken || null;
-  }, [accessToken]);
-
+  const [bootstrap, setBootstrap] = useState({
+    hasStoredTokens: hasEncryptedTokens(),
+  });
   // force logout vindo do axios
   useEffect(() => {
     function handler() {
@@ -29,8 +31,28 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        const me = await auth.meCompact();
-        setUser(me);
+        // 1) tenta recuperar access do storage (criptografado)
+        const stored = await loadAccessToken();
+        if (stored) {
+          setAccessToken(stored); // memória síncrona para axios
+          setAccessTokenState(stored); // estado para a UI
+        } else {
+          // 2) se não há access, tenta refresh silencioso (cookie httpOnly)
+          try {
+            const res = await auth.refresh?.(); // crie em auth.services.js se ainda não tiver
+            const newAccess = res?.accessToken || res; // compat
+            if (newAccess) {
+              setAccessToken(newAccess);
+              setAccessTokenState(newAccess);
+              saveTokens?.({ accessToken: newAccess });
+              setBootstrap({ hasStoredTokens: true });
+            }
+          } catch {}
+        }
+
+        // 3) só agora chama o me/compact — já com Authorization no axios
+        const me = await meCompact();
+        setUser(me || null);
       } catch {
         // não logado
       } finally {
@@ -40,9 +62,13 @@ export default function AuthProvider({ children }) {
   }, []);
 
   async function login(email, password) {
-    const { user, accessToken } = await auth.login(email, password);
+    const { user, accessToken, refreshToken } = await auth.login(
+      email,
+      password
+    );
     setUser(user);
     setAccessToken(accessToken);
+    setBootstrap({ hasStoredTokens: true });
     return user;
   }
 
@@ -52,8 +78,10 @@ export default function AuthProvider({ children }) {
     } catch {}
     setUser(null);
     setAccessToken(null);
+    setBootstrap({ hasStoredTokens: false });
+    clearTokens();
     qc.clear();
-    if (!silent) toast({ title: "Sessão encerrada" });
+    if (!silent) toast.success("Sessão encerrada");
   }
 
   const value = useMemo(
@@ -61,6 +89,7 @@ export default function AuthProvider({ children }) {
       user,
       accessToken,
       loading,
+      bootstrap,
       isAuthenticated: !!user,
       hasRole: (roles = []) => (user ? roles.includes(user.role) : false),
       login,

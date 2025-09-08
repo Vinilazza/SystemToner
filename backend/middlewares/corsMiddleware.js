@@ -1,24 +1,28 @@
 // middleware/corsMiddleware.js
-
 function corsMiddleware(req, res, next) {
-  // Permite todas as origens; para restringir, substitua "*" por um domínio específico
-  res.header("Access-Control-Allow-Origin", "*");
+  const allowed = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  // Permite os métodos HTTP desejados
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  const origin = req.headers.origin;
+  if (!allowed.length || (origin && allowed.includes(origin))) {
+    // Reflete a origem EXATA (nunca "*") quando for credenciais
+    res.header("Access-Control-Allow-Origin", origin || "*");
+    res.header("Access-Control-Allow-Credentials", "true");
+  }
 
-  // Permite os cabeçalhos que seu aplicativo precisa receber (pode personalizar conforme necessário)
+  res.header("Vary", "Origin"); // caches corretos
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
   res.header(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
 
-  // Se for uma requisição do tipo OPTIONS (pré-voo), envia resposta imediatamente
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
-  // Caso contrário, passa a execução para o próximo middleware ou rota
+  if (req.method === "OPTIONS") return res.sendStatus(204); // preflight OK
   next();
 }
 

@@ -1,73 +1,66 @@
+// src/lib/axios.js
 import axios from "axios";
+import { getAccessToken, setAccessToken } from "@/lib/authToken";
+import { saveTokens } from "@/lib/tokenStorage"; // se você usa o armazenamento criptografado
+// Base do backend
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true, // necessário p/ cookie httpOnly de refresh
+  baseURL,
+  withCredentials: true, // se usar refresh via cookie httpOnly
 });
 
-let isRefreshing = false;
-let queue = [];
+// Injeta Authorization em TODA request
+api.interceptors.request.use((cfg) => {
+  const t = getAccessToken();
+  if (t) cfg.headers.Authorization = `Bearer ${t}`;
+  return cfg;
+});
 
-function onRefreshed(newAccess) {
-  queue.forEach((p) => p.resolve(newAccess));
-  queue = [];
-}
-function onRefreshError(err) {
-  queue.forEach((p) => p.reject(err));
-  queue = [];
-}
-
+// Anexa o AccessToken da memória (AuthProvider mantém em window.__ACCESS_TOKEN__)
 api.interceptors.request.use((config) => {
-  const token = window.__ACCESS_TOKEN__ || null; // guardado em memória (AuthProvider)
+  const token = window.__ACCESS_TOKEN__;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
+// Refresh automático em 401
+let refreshing = null;
 api.interceptors.response.use(
-  (res) => res,
+  (r) => r,
   async (error) => {
-    const original = error.config;
+    const cfg = error?.config;
     const status = error?.response?.status;
 
-    // evita loop no próprio refresh/logout
-    const isAuthRoute = /\/auth\/(refresh|login|logout)/.test(
-      original?.url || ""
-    );
+    if (status === 401 && !cfg?._retry) {
+      cfg._retry = true;
 
-    if (status === 401 && !original._retry && !isAuthRoute) {
-      original._retry = true;
+      try {
+        // tenta refresh diretamente no mesmo client para evitar import circular
+        refreshing =
+          refreshing ||
+          api
+            .post("/auth/refresh")
+            .then((res) => {
+              const newToken = res?.data?.data?.accessToken;
+              if (newToken) {
+                setAccessToken(newToken); // memória síncrona
+                saveTokens?.({ accessToken: newToken }); // persiste criptografado (se usar)
+              }
+              return newToken;
+            })
+            .finally(() => (refreshing = null));
 
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          const { data } = await api.post("/auth/refresh"); // cookie httpOnly já vai junto
-          const newAccess = data?.data?.accessToken;
-          window.__ACCESS_TOKEN__ = newAccess || null;
-          isRefreshing = false;
-          onRefreshed(newAccess);
-          original.headers.Authorization = `Bearer ${newAccess}`;
-          return api(original);
-        } catch (err) {
-          isRefreshing = false;
-          onRefreshError(err);
-          // força logout visual (quem escuta é o AuthProvider)
-          window.dispatchEvent(new CustomEvent("auth:force-logout"));
-          return Promise.reject(err);
-        }
+        const newToken = await refreshing;
+        if (!newToken) throw new Error("refresh-failed");
+        cfg.headers.Authorization = `Bearer ${newToken}`;
+        return api(cfg);
+      } catch {
+        // avisa o AuthProvider para fazer logout
+        window.dispatchEvent(new CustomEvent("auth:force-logout"));
       }
-
-      // fila para aguardar refresh
-      return new Promise((resolve, reject) => {
-        queue.push({
-          resolve: (newAccess) => {
-            if (newAccess)
-              original.headers.Authorization = `Bearer ${newAccess}`;
-            resolve(api(original));
-          },
-          reject: (err) => reject(err),
-        });
-      });
     }
+
     return Promise.reject(error);
   }
 );
