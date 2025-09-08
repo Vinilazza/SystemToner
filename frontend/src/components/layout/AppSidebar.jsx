@@ -18,7 +18,7 @@ import {
   Moon,
   Monitor,
 } from "lucide-react";
-
+import logo from "@/assets/logo.png";
 function ThemeToggle() {
   const [mode, setMode] = useState(
     () => localStorage.getItem("ui-theme") || "system"
@@ -137,7 +137,7 @@ export default function AppSidebar({ onNavigate }) {
       {/* Topo (fixo dentro do aside) */}
       <div className="flex items-center justify-between px-3 h-14 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded bg-primary" />
+          <img src={logo} alt="Logo" className="h-6 w-6" />
           {!collapsed && <div className="font-semibold">TonersFull</div>}
         </div>
         <Button
