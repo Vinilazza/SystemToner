@@ -142,6 +142,70 @@ exports.listUsers = async (req, res) => {
   }
 };
 
+exports.createUserAdmin = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      role = "usuario",
+      isActive = true,
+    } = req.body || {};
+
+    // validações simples
+    if (!name || !email || !password) {
+      return res
+        .status(422)
+        .json({
+          success: false,
+          error: "Nome, e-mail e senha são obrigatórios",
+        });
+    }
+    const roles = ["admin", "tecnico", "usuario"];
+    if (!roles.includes(String(role))) {
+      return res.status(422).json({ success: false, error: "Papel inválido" });
+    }
+    // e-mail único
+    const exists = await User.findOne({ email }).lean();
+    if (exists) {
+      return res
+        .status(409)
+        .json({ success: false, error: "E-mail já cadastrado" });
+    }
+
+    // cria e salva (assumindo que o model faz hash da senha em pre('save'))
+    const user = new User({
+      name,
+      email,
+      role,
+      isActive: !!isActive,
+    });
+    user.password = password;
+
+    await user.save();
+
+    // retorna compacto (sem tokens)
+    return res.status(201).json({
+      success: true,
+      data: user.toCompact
+        ? user.toCompact()
+        : {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isActive: user.isActive,
+            createdAt: user.createdAt,
+          },
+    });
+  } catch (e) {
+    console.error("[createUserAdmin] error:", e);
+    return res
+      .status(500)
+      .json({ success: false, error: "Erro ao criar usuário" });
+  }
+};
+
 // GET /users/:id  (admin)
 exports.getUserById = async (req, res) => {
   try {

@@ -6,6 +6,8 @@ import { QK } from "@/lib/keys";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+import { useAuth } from "@/providers/AuthProvider";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -27,6 +29,8 @@ import MovementDialog from "@/components/stock/MovementDialog";
 
 export default function TonersListPage() {
   const qc = useQueryClient();
+  const { hasRole } = useAuth();
+  const isManager = hasRole?.(["admin", "tecnico"]); // 👈 só esses podem criar/movimentar/editar
 
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
@@ -68,31 +72,35 @@ export default function TonersListPage() {
             Gerencie modelos de toner e seus níveis de estoque.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link to="/printers/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova impressora
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link to="/toners/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo toner
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setSelectedToner(null);
-              setOpenMv(true);
-            }}
-            title="Registrar movimento"
-          >
-            Registrar movimento <MoveRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+
+        {/* Botões de ação — visíveis só para admin/tecnico */}
+        {isManager && (
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/printers/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Nova impressora
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/toners/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo toner
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setSelectedToner(null);
+                setOpenMv(true);
+              }}
+              title="Registrar movimento"
+            >
+              Registrar movimento <MoveRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card>
@@ -104,6 +112,7 @@ export default function TonersListPage() {
             </span>
           </CardTitle>
         </CardHeader>
+
         <CardContent className="space-y-4">
           {/* Filtros */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -128,6 +137,7 @@ export default function TonersListPage() {
                 Limpar
               </Button>
             </div>
+
             <div className="flex gap-6 items-center">
               <div className="flex items-center gap-2">
                 <Switch
@@ -171,25 +181,35 @@ export default function TonersListPage() {
                   <TableHead>Cor</TableHead>
                   <TableHead className="text-right">Estoque</TableHead>
                   <TableHead className="text-right">Mín.</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  {isManager && (
+                    <TableHead className="text-right">Ações</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center">
+                    <TableCell
+                      colSpan={isManager ? 7 : 6}
+                      className="py-8 text-center"
+                    >
                       <Loader2 className="inline h-4 w-4 animate-spin mr-2" />
                       Carregando…
                     </TableCell>
                   </TableRow>
                 )}
+
                 {!isLoading && items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-8 text-center">
+                    <TableCell
+                      colSpan={isManager ? 7 : 6}
+                      className="py-8 text-center"
+                    >
                       Nenhum toner encontrado.
                     </TableCell>
                   </TableRow>
                 )}
+
                 {!isLoading &&
                   items.map((t) => {
                     const falta = Math.max(
@@ -205,7 +225,7 @@ export default function TonersListPage() {
                           {t.color || "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {t.currentStock ?? 0}{" "}
+                          {t.currentStock ?? 0}
                           {falta > 0 && (
                             <Badge variant="destructive" className="ml-2">
                               Falta {falta}
@@ -215,46 +235,50 @@ export default function TonersListPage() {
                         <TableCell className="text-right">
                           {t.minStock ?? 0}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              title="Editar toner"
-                            >
-                              <Link to={`/toners/${t._id}/edit`}>
-                                <Pencil className="h-4 w-4 mr-1" /> Editar
-                              </Link>
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onToggleActive(t._id)}
-                              title={t.isActive ? "Desativar" : "Ativar"}
-                            >
-                              <Power className="h-4 w-4 mr-1" />{" "}
-                              {t.isActive ? "Desativar" : "Ativar"}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedToner({
-                                  _id: t._id,
-                                  name: t.name,
-                                  sku: t.sku,
-                                });
-                                setOpenMv(true);
-                              }}
-                              title="Registrar movimento"
-                            >
-                              <MoveRight className="h-4 w-4 mr-1" /> Movimentar
-                            </Button>
-                          </div>
-                        </TableCell>
+
+                        {isManager && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                title="Editar toner"
+                              >
+                                <Link to={`/toners/${t._id}/edit`}>
+                                  <Pencil className="h-4 w-4 mr-1" /> Editar
+                                </Link>
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onToggleActive(t._id)}
+                                title={t.isActive ? "Desativar" : "Ativar"}
+                              >
+                                <Power className="h-4 w-4 mr-1" />{" "}
+                                {t.isActive ? "Desativar" : "Ativar"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedToner({
+                                    _id: t._id,
+                                    name: t.name,
+                                    sku: t.sku,
+                                  });
+                                  setOpenMv(true);
+                                }}
+                                title="Registrar movimento"
+                              >
+                                <MoveRight className="h-4 w-4 mr-1" />{" "}
+                                Movimentar
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -294,10 +318,10 @@ export default function TonersListPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog de movimento */}
+      {/* Dialog de movimento — só abre se manager */}
       <MovementDialog
-        open={openMv}
-        onOpenChange={setOpenMv}
+        open={isManager && openMv}
+        onOpenChange={(v) => setOpenMv(v)}
         defaultToner={selectedToner}
         onSuccess={() => {}}
       />

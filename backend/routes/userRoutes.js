@@ -21,6 +21,7 @@ router.patch(
   requireRole("admin"),
   userCtrl.toggleUser
 );
+router.post("/", requireAuth, requireRole("admin"), userCtrl.createUserAdmin);
 
 // (opcional) perfil detalhado de qualquer user — somente admin
 router.get(

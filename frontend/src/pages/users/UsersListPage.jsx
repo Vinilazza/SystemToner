@@ -1,6 +1,7 @@
+// src/pages/users/UsersListPage.jsx
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { listUsers, toggleUser } from "@/services/user.service";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { listUsers, toggleUser, createUser } from "@/services/user.service";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -25,7 +26,15 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Pencil, Power } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Loader2, Pencil, Power, Plus, Eye, EyeOff } from "lucide-react";
 
 const ROLES = [
   { value: "all", label: "Todos" },
@@ -34,6 +43,164 @@ const ROLES = [
   { value: "usuario", label: "Usuário (leitor)" },
 ];
 
+function CreateUserDialog({ open, onOpenChange, onCreated }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("usuario");
+  const [isActive, setIsActive] = useState(true);
+  const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: async () => {
+      if (!name.trim()) throw new Error("Informe o nome");
+      if (!/^\S+@\S+\.\S+$/.test(email.trim()))
+        throw new Error("E-mail inválido");
+      if (!password) throw new Error("Informe a senha");
+      return createUser({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        role,
+        isActive,
+      });
+    },
+    onSuccess: (user) => {
+      toast.success("Usuário criado com sucesso");
+      qc.invalidateQueries({ queryKey: ["users"] });
+      onCreated?.(user);
+      onOpenChange(false);
+      // reset
+      setName("");
+      setEmail("");
+      setPassword("");
+      setRole("usuario");
+      setIsActive(true);
+    },
+    onError: (e) => {
+      const msg =
+        e?.response?.data?.error || e?.message || "Falha ao criar usuário";
+      toast.error(msg);
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !isPending && onOpenChange(v)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novo usuário</DialogTitle>
+          <DialogDescription>
+            Preencha os dados para criar o usuário.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="email">E-mail</Label>
+            <Input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="pessoa@empresa.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Papel</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o papel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="usuario">Usuário</SelectItem>
+                  <SelectItem value="tecnico">Técnico</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label className="mb-1">Status</Label>
+              <div className="flex items-center gap-2 h-10">
+                <Switch
+                  id="active"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                  disabled={isPending}
+                />
+                <Label htmlFor="active" className="text-sm">
+                  {isActive ? "Ativo" : "Inativo"}
+                </Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="password">Senha</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPwd ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isPending}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPwd ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            Cancelar
+          </Button>
+          <Button onClick={() => mutateAsync()} disabled={isPending}>
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Criando…
+              </>
+            ) : (
+              "Criar usuário"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function UsersListPage() {
   const qc = useQueryClient();
 
@@ -41,6 +208,7 @@ export default function UsersListPage() {
   const [q, setQ] = useState("");
   const [role, setRole] = useState("all");
   const [onlyActive, setOnlyActive] = useState(undefined); // undefined = todos
+  const [openCreate, setOpenCreate] = useState(false);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["users", { page, q, role, onlyActive }],
@@ -71,12 +239,18 @@ export default function UsersListPage() {
 
   return (
     <div className="p-6 space-y-4">
+      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
           <p className="text-sm text-muted-foreground">
             Gerencie papéis e acesso dos usuários.
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setOpenCreate(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Novo usuário
+          </Button>
         </div>
       </div>
 
@@ -89,6 +263,7 @@ export default function UsersListPage() {
             </span>
           </CardTitle>
         </CardHeader>
+
         <CardContent className="space-y-4">
           {/* Filtros */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -248,6 +423,15 @@ export default function UsersListPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog de criação */}
+      <CreateUserDialog
+        open={openCreate}
+        onOpenChange={setOpenCreate}
+        onCreated={() => {
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

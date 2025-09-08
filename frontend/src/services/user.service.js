@@ -11,6 +11,23 @@ export async function meProfile() {
   return data?.data;
 }
 
+export async function createUser({
+  name,
+  email,
+  password,
+  role = "usuario",
+  isActive = true,
+}) {
+  const { data } = await api.post("/users", {
+    name,
+    email,
+    password,
+    role,
+    isActive,
+  });
+  return data?.data; // user compacto
+}
+
 // NOVAS (Admin)
 export async function listUsers({
   page = 1,

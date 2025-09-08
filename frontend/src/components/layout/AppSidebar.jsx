@@ -97,7 +97,12 @@ export default function AppSidebar({ onNavigate }) {
     () => [
       { to: "/", label: "Dashboard", icon: LayoutDashboard, show: true },
       { to: "/toners", label: "Toners", icon: Package, show: true },
-      { to: "/printers", label: "Impressoras", icon: Printer, show: true },
+      {
+        to: "/printers",
+        label: "Impressoras",
+        icon: Printer,
+        show: isAdmin || isTech,
+      },
 
       { to: "/stock", label: "Histórico", icon: History, show: true },
     ],
