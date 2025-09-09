@@ -1,4 +1,6 @@
-require("dotenv").config(); // Carrega variáveis de ambiente (ex: MONGO_URI, PORT)
+if (!process.env.VERCEL) {
+  require("dotenv").config();
+}
 const app = require("./app");
 const connectDB = require("./config/db");
 
