@@ -20,7 +20,7 @@
         { "key": "Access-Control-Allow-Credentials", "value": "true" },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://servicos.vlsystem.com.br"
+          "value": "https://tonersfull.vlsystem.com.br"
         },
         {
           "key": "Access-Control-Allow-Methods",
