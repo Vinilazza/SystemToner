@@ -140,7 +140,7 @@ exports.login = async (req, res) => {
     });
   }
 
-  return res.json({
+  return res.status(200).json({
     success: true,
     data: {
       user: user.toCompact(),
@@ -192,7 +192,7 @@ exports.refresh = async (req, res) => {
       });
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       data: {
         accessToken,
