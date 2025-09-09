@@ -1,5 +1,5 @@
 import AppSidebar from "./AppSidebar";
-import AppTopbar from "./AppTopbar";
+import AppTopbar from "./AppTopBar";
 import { Outlet } from "react-router-dom";
 
 export default function AppLayout() {
