@@ -5,12 +5,12 @@ const corsMiddleware = require("./middlewares/corsMiddleware");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const app = express();
+app.set("trust proxy", true);
 
 // Middlewares
 app.use(corsMiddleware);
 app.use(express.json());
 app.use(cookieParser());
-app.set("trust proxy", true);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
