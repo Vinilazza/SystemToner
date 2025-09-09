@@ -23,7 +23,4 @@ app.get("/", (req, res) => {
   res.send("API do Controle de Toners");
 });
 
-const connectDB = require("./config/db");
-connectDB().catch((err) => console.error("DB connect error:", err));
-
 module.exports = app;

@@ -1,5 +1,13 @@
-// api/index.js
-const app = require("../app"); // <- use esta se app.js está em backend/
-//// const app = require("../app");     // <- use esta se app.js está na raiz
+// backend/api/index.js
+const app = require("../app");
+const connectDB = require("../config/db");
 
-module.exports = app; // exporta o app para o runtime serverless do Vercel
+let isConnected = false;
+
+module.exports = async (req, res) => {
+  if (!isConnected) {
+    await connectDB(); // garante conexão na primeira chamada
+    isConnected = true;
+  }
+  return app(req, res); // delega para o Express
+};
