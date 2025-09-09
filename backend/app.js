@@ -7,6 +7,8 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", true);
 
+const connectDB = require("./config/db");
+connectDB().catch((err) => console.error("DB connect error:", err));
 // Middlewares
 app.use(corsMiddleware);
 app.use(express.json());
