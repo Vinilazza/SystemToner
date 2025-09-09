@@ -7,8 +7,6 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.set("trust proxy", true);
 
-const connectDB = require("./config/db");
-connectDB().catch((err) => console.error("DB connect error:", err));
 // Middlewares
 app.use(corsMiddleware);
 app.use(express.json());
@@ -24,5 +22,8 @@ app.use(brotliCompressionMiddleware);
 app.get("/", (req, res) => {
   res.send("API do Controle de Toners");
 });
+
+const connectDB = require("./config/db");
+connectDB().catch((err) => console.error("DB connect error:", err));
 
 module.exports = app;
