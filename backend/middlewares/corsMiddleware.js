@@ -1,24 +1,38 @@
-// middleware/corsMiddleware.js
-
+// middlewares/corsMiddleware.js
 function corsMiddleware(req, res, next) {
-  // Permite todas as origens; para restringir, substitua "*" por um domínio específico
-  res.header("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
 
-  // Permite os métodos HTTP desejados
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  // Liste explicitamente os domínios do seu front:
+  const allowed = [
+    "https://tonersfull.vlsystem.com.br",
+    "http://localhost:5173", // para dev local, se precisar
+    process.env.CLIENT_URL, // opcional via env
+  ].filter(Boolean);
 
-  // Permite os cabeçalhos que seu aplicativo precisa receber (pode personalizar conforme necessário)
+  // Se for um origin permitido, reflita-o e habilite credenciais.
+  if (origin && allowed.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+  }
+  // Para caches/CDN não misturarem respostas por origem:
+  res.header("Vary", "Origin");
+
+  // Métodos e cabeçalhos aceitos
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
   res.header(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
 
-  // Se for uma requisição do tipo OPTIONS (pré-voo), envia resposta imediatamente
+  // Responde o preflight imediatamente
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    // 204 é o status padrão para preflight sem body
+    return res.status(204).end();
   }
 
-  // Caso contrário, passa a execução para o próximo middleware ou rota
   next();
 }
 
