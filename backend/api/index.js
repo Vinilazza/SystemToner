@@ -1,13 +1,9 @@
-// backend/api/index.js
+// api/index.js
 const app = require("../app");
 const connectDB = require("../config/db");
 
-let isConnected = false;
-
 module.exports = async (req, res) => {
-  if (!isConnected) {
-    await connectDB(); // garante conexão na primeira chamada
-    isConnected = true;
-  }
+  // garante conexão no ambiente serverless (com cache)
+  await connectDB();
   return app(req, res); // delega para o Express
 };
