@@ -36,41 +36,6 @@ Sistema completo de **gerenciamento de toners e impressoras**, com controle de *
 
 ---
 
-## 🧭 Estrutura do Repositório (sugerida)
-
-```
-tonersfull/
-├─ frontend/
-│  ├─ src/
-│  │  ├─ pages/
-│  │  ├─ components/
-│  │  ├─ hooks/
-│  │  ├─ services/           # chamadas Axios centralizadas
-│  │  ├─ contexts/
-│  │  └─ lib/                # helpers (auth, keys, etc.)
-│  ├─ index.html
-│  └─ vite.config.js
-├─ backend/
-│  ├─ src/
-│  │  ├─ app.js              # Express app
-│  │  ├─ server.js           # bootstrap server
-│  │  ├─ config/
-│  │  │  ├─ db.js            # conexão Mongo
-│  │  │  └─ cors.js
-│  │  ├─ middlewares/
-│  │  │  ├─ auth.js          # JWT + roles
-│  │  │  └─ error.js
-│  │  ├─ models/             # Mongoose (User, Toner, Printer, Movement, ...)
-│  │  ├─ controllers/        # lógica de rotas
-│  │  ├─ routes/             # /api/*
-│  │  ├─ services/           # e-mail, push, agendadores, etc.
-│  │  └─ jobs/               # cron / agendas para alertas
-│  └─ package.json
-└─ README.md
-```
-
----
-
 ## 🚀 Como rodar localmente
 
 ### 1) Backend
