@@ -57,6 +57,11 @@ yarn run dev
 
 ```
 
+Usuario admin:
+
+email: admin@gmail.com
+senha: @admin123
+
 ---
 
 ## 🔐 Autenticação & Perfis
